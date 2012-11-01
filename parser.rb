@@ -34,8 +34,8 @@ module Kaleidoscope
     end
 
     rule :prototype do |r|
-      r['def', :identifier, '(', :args, ')'].as do |_, name, _, args, _|
-        Prototype.new name, args
+      r['def', :identifier, '(', :params, ')'].as do |_, name, _, params, _|
+        Prototype.new name, params
       end
     end
 
@@ -51,7 +51,7 @@ module Kaleidoscope
 
     rule :params do |r|
       r[].as { [] }
-      r[:args, ',', :identifier].as {|args, _, e| args << e }
+      r[:params, ',', :identifier].as {|args, _, e| args << e }
       r[:identifier].as {|id| [id] }
     end
   end

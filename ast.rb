@@ -7,19 +7,10 @@ module Kaleidoscope
   class Expression; end
 
   Number     = Struct.new :value
-  Variable   = Struct.new :value
+  Variable   = Struct.new :name
   Binary     = Struct.new :op, :left, :right
-
-  class Add < Binary; end
-  class Sub < Binary; end
-  class Mul < Binary; end
-  class Div < Binary; end
-  class LT  < Binary; end
-
-  Call      = Struct.new :name, :args
-  Prototype = Struct.new :name, :parameters
-  Function  = Struct.new :prototype, :body
+  Call       = Struct.new :name, :args
+  Prototype  = Struct.new :name, :parameters
+  Function   = Struct.new :prototype, :body
 end
-
-Kaleidoscope::Number.new 5
 

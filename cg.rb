@@ -7,7 +7,7 @@ module Kaleidoscope
       @variables = []
 
       @module = LLVM::Module.new '(sandbox)'
-      @module.functions.add("main", [], LLVM::Int) do |main|
+      @module.functions.add("main", [], LLVM::Float) do |main|
         entry = main.basic_blocks.append "entry"
         entry.build do |b|
           gen_code = ast.to_llvm(self, b)
