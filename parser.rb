@@ -6,6 +6,7 @@ module Kaleidoscope
     ['(', ')', ',', 'def', ';'].each {|x| rule x }
     ['+', '-'].each {|x| rule(x) % :left ^ 1 }
     ['*', '/'].each {|x| rule(x) % :left ^ 2 }
+    ['>', '<'].each {|x| rule(x) % :left ^ 3 }
   
     rule :goal do |r|
       r[:statement, ';'].as {|s, _| s }
@@ -30,6 +31,8 @@ module Kaleidoscope
       r[:expression, '-', :expression].as {|e, op, e2| Binary.new op, e, e2 }
       r[:expression, '*', :expression].as {|e, op, e2| Binary.new op, e, e2 }
       r[:expression, '/', :expression].as {|e, op, e2| Binary.new op, e, e2 }
+      r[:expression, '<', :expression].as {|e, op, e2| Binary.new op, e, e2 }
+      r[:expression, '>', :expression].as {|e, op, e2| Binary.new op, e, e2 }
       r[:identifier, '(', :args, ')'].as {|v, _, args, _| Call.new v, args }
     end
 

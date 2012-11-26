@@ -19,11 +19,24 @@ require relative{ 'parser.rb' }
 require relative{ 'cg.rb' }
 
 line = ''
+jit = Kaleidoscope::JIT.new
 
 loop do
   print '>> '
 
   break unless bit = gets.chomp
+
+  if bit[0, 1] == '.'
+    begin
+      eval bit[1..-1] 
+    rescue => r
+      puts r
+      puts r.backtrace
+    ensure
+      next
+    end
+  end
+
   line += ' ' unless line.empty?
   line += bit
 
@@ -32,12 +45,11 @@ loop do
     break if line == 'exit;'
 
     ast = Kaleidoscope::Parser.new.parse line
-    pp ast
+    #pp ast
     LLVM.init_x86
-    jit = Kaleidoscope::JIT.new ast
-    value = jit.run
-    pp jit.module.dump
-    pp value.to_f
+    value = jit.run(ast)
+    #pp jit.module.dump
+    puts " => #{value.to_f}"
 
     line = ''
   end
