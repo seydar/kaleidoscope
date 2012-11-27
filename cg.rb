@@ -1,10 +1,8 @@
 module Kaleidoscope
   class JIT
     attr_accessor :module
-    attr_accessor :variables
 
     def initialize
-      @variables = {}
       @current_num = 0
 
       @module = LLVM::Module.new '(sandbox)'
@@ -13,12 +11,14 @@ module Kaleidoscope
     def run(ast)
       func = @module.functions.add("main#{@current_num}", [], LLVM::Float) do |main|
         entry = main.basic_blocks.append "entry"
-        entry.build do |b|
-          gen_code = ast.to_llvm(self, b)
-          b.ret gen_code
-        end
+        builder = LLVM::Builder.new
+        builder.position_at_end entry
+
+        # the last argument is for variables. it manages scoping
+        res = ast.to_llvm(self, main, builder, {})
+        res = LLVM::Float 1 if LLVM::Function === res
+        builder.ret res
       end
-      puts " m| #{@module.verify.inspect}"
 
       jit = LLVM::JITCompiler.new @module
       res = jit.run_function @module.functions["main#{@current_num}"]
@@ -28,23 +28,21 @@ module Kaleidoscope
   end
 
   class Number
-    def to_llvm(jit, builder)
+    def to_llvm(jit, func, builder, bindings)
       LLVM::Float value.to_i
     end
   end
 
   class Variable
-    def to_llvm(jit, builder)
-      p name
-      p jit.variables
-      jit.variables[name] || raise("unknown variable `#{name}`")
+    def to_llvm(jit, func, builder, bindings)
+      bindings[name] || raise("unknown variable `#{name}`")
     end
   end
 
   class Binary
-    def to_llvm(jit, builder)
-      l = left.to_llvm(jit, builder)
-      r = right.to_llvm(jit, builder)
+    def to_llvm(jit, func, builder, bindings)
+      l = left.to_llvm(jit, func, builder, bindings)
+      r = right.to_llvm(jit, func, builder, bindings)
       raise "wtf" unless l && r
 
       case op
@@ -67,45 +65,45 @@ module Kaleidoscope
   end
 
   class Call
-    def to_llvm(jit, builder)
+    def to_llvm(jit, func, builder, bindings)
       func = jit.module.functions[name.name]
 
       raise "unknown function `#{name}`" unless func
       raise "improper args" unless func.params.size == args.size
 
-      builder.call func, args.map {|a| a.to_llvm(jit, builder) }
+      builder.call func, *args.map {|a| a.to_llvm(jit, func, builder, bindings) }
     end
   end
 
   class Prototype
     # http://llvm.org/docs/tutorial/LangImpl3.html
-    def to_llvm(jit, builder)
-      func = jit.module.functions.add(name.name, [LLVM::Float] * parameters.size, LLVM::Float)
-      raise "redefinition of function" if func.basic_blocks.size != 0
-      raise "diff number of args" if func.params.size != parameters.size
+    def to_llvm(jit, func, builder, bindings)
+      f = jit.module.functions.add(name.name, [LLVM::Float] * parameters.size, LLVM::Float)
+      raise "redefinition of function" if f.basic_blocks.size != 0
+      raise "diff number of args" if f.params.size != parameters.size
 
       parameters.each_with_index do |param, i|
-        func.params[i].name = param.name
-        jit.variables[param.name] = func.params[i]
+        f.params[i].name = param.name
+        bindings[param.name] = f.params[i]
       end
 
-      puts "are we human"
-      func
+      f
     end
   end
 
   class Function
-    def to_llvm(jit, builder)
-      func = prototype.to_llvm(jit, builder)
+    def to_llvm(jit, func, builder, bindings)
+      muuttuja = {}
+      f = prototype.to_llvm(jit, func, builder, muuttuja)
 
-      entry = func.basic_blocks.append "entry"
-      entry.build do |b|
-        gen_code = body.to_llvm(jit, b)
-        b.ret gen_code
-      end
+      entry = f.basic_blocks.append "entry"
+      rakentaja = LLVM::Builder.new
+      rakentaja.position_at_end entry
 
-      puts " f| #{func.verify.inspect}"
-      func
+      res = body.to_llvm(jit, f, rakentaja, muuttuja)
+      rakentaja.ret res
+
+      f
     end
   end
 end
