@@ -12,5 +12,7 @@ module Kaleidoscope
   Call       = Struct.new :name, :args
   Prototype  = Struct.new :name, :parameters
   Function   = Struct.new :prototype, :body
+  If         = Struct.new :cond, :sitten, :toisin
+  For        = Struct.new :counter, :counter_expr, :guard, :increment, :body
 end
 

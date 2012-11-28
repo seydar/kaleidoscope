@@ -1,11 +1,12 @@
 module Kaleidoscope
   class JIT
     attr_accessor :module
+    attr_accessor :variables
 
     def initialize
       @current_num = 0
-
-      @module = LLVM::Module.new '(sandbox)'
+      @module      = LLVM::Module.new '(sandbox)'
+      @variables   = {}
     end
 
     def run(ast)
@@ -15,7 +16,7 @@ module Kaleidoscope
         builder.position_at_end entry
 
         # the last argument is for variables. it manages scoping
-        res = ast.to_llvm(self, main, builder, {})
+        res = ast.to_llvm(self, main, builder, @variables)
         res = LLVM::Float 1 if LLVM::Function === res
         builder.ret res
       end
@@ -64,6 +65,78 @@ module Kaleidoscope
     end
   end
 
+  class If
+    def to_llvm(jit, func, builder, bindings)
+      # the basic blocks
+      tosi    = func.basic_blocks.append "tosi"
+      epatosi = func.basic_blocks.append "epatosi"
+      merge   = func.basic_blocks.append "merge"
+
+      # everything is true except for 0
+      condv = cond.to_llvm(jit, func, builder, bindings)
+      test = builder.fcmp(:one, LLVM::Float(0), condv, "test")
+      builder.cond(test, tosi, epatosi)
+
+      # jump to the end of a BB, add the generated code,
+      # then branch to the merge
+      # sitten = finnish for "then"
+      builder.position_at_end(tosi)
+      tosi_val = sitten.to_llvm(jit, func, builder, bindings)
+      builder.br(merge)
+
+      # toisin = finnish for "otherwise", "else"
+      # sorry for using finnish, but to use then or else would be
+      # a syntax error
+      builder.position_at_end(epatosi)
+      epatosi_val = toisin.to_llvm(jit, func, builder, bindings)
+      builder.br(merge)
+
+      builder.position_at_end(merge)
+      builder.phi(tosi_val.type,
+                  tosi    => tosi_val,
+                  epatosi => epatosi_val)
+    end
+  end
+
+  class For
+    def to_llvm(jit, func, builder, bindings)
+      bonjour = builder.insert_block
+      boucle  = func.basic_blocks.append "boucle"
+      apres   = func.basic_blocks.append "apres"
+
+      initial = counter_expr.to_llvm(jit, func, builder, bindings)
+      builder.br(boucle)
+
+      # start dealing with the loop
+      builder.position_at_end(boucle)
+
+      # save the old variable in case of overshadowing
+      old_val = bindings[counter.name]
+
+      # evaluate the guard in a clean environment
+      guard_val  = guard.to_llvm(jit, func, builder, bindings)
+
+      # this is only one value because there IS no other value... yet
+      bindings[counter.name] = builder.phi(initial.type,
+                                           bonjour => initial)
+
+      res = body.to_llvm(jit, func, builder, bindings)
+
+      # increment the counter and then add it to the phi node
+      inc = increment.to_llvm(jit, func, builder, bindings)
+      new_val = builder.fadd(bindings[counter.name], inc)
+      bindings[counter.name].add boucle => new_val
+
+      # do we jump to termination or do we loop again?
+      guard_cond = builder.fcmp(:one, new_val, guard_val)
+      builder.cond(guard_cond, boucle, apres)
+
+      # terminate here
+      builder.position_at_end(apres)
+      bindings[counter.name] = old_val
+    end
+  end
+
   class Call
     def to_llvm(jit, func, builder, bindings)
       func = jit.module.functions[name.name]
@@ -93,14 +166,15 @@ module Kaleidoscope
 
   class Function
     def to_llvm(jit, func, builder, bindings)
-      muuttuja = {}
-      f = prototype.to_llvm(jit, func, builder, muuttuja)
+      muuttujat = bindings.dup
+      f = prototype.to_llvm(jit, func, builder, muuttujat)
 
       entry = f.basic_blocks.append "entry"
+      p muuttujat
       rakentaja = LLVM::Builder.new
       rakentaja.position_at_end entry
 
-      res = body.to_llvm(jit, f, rakentaja, muuttuja)
+      res = body.to_llvm(jit, f, rakentaja, muuttujat)
       rakentaja.ret res
 
       f

@@ -3,7 +3,9 @@ module Kaleidoscope
     start :goal
 
     rule(:wsp => /\s+/).skip!
-    ['(', ')', ',', 'def', ';'].each {|x| rule x }
+    ['(', ')', ',', 'def', ';',
+     'if', 'then', 'else',
+     'for', '=', ',', 'in'].each {|x| rule x }
     ['+', '-'].each {|x| rule(x) % :left ^ 1 }
     ['*', '/'].each {|x| rule(x) % :left ^ 2 }
     ['>', '<'].each {|x| rule(x) % :left ^ 3 }
@@ -21,6 +23,28 @@ module Kaleidoscope
     rule(:identifier => /[A-Za-z][A-Za-z0-9]*/).as {|v| Variable.new v }
     rule(:number => /[0-9]+/).as {|i| Number.new i }
 
+    rule :if do |r|
+      r['if', :expression, 'then',
+       :expression, 'else', :expression].as do |_, e, _, e2, _, e3|
+        If.new e, e2, e3
+      end
+      r['if', :expression, 'then', :expression].as do |_, e, _, e2|
+        If.new e, e2
+      end
+    end
+
+    rule :for do |r|
+      r['for', :identifier, '=', :expression, ',',
+        :expression, 'in', :expression].as do |_, i, _, e, _, e1, _, e3|
+        For.new i, e, e1, nil, e3
+      end
+      r['for', :identifier, '=', :expression, ',',
+        :expression, ',', :expression,
+        'in', :expression].as do |_, i, _, e, _, e1, _, e2, _, e3|
+        For.new i, e, e1, e2, e3
+      end
+    end
+
     rule :expression do |r|
       r['(', :expression, ')'].as {|_, e, _| e }
 
@@ -34,6 +58,9 @@ module Kaleidoscope
       r[:expression, '<', :expression].as {|e, op, e2| Binary.new op, e, e2 }
       r[:expression, '>', :expression].as {|e, op, e2| Binary.new op, e, e2 }
       r[:identifier, '(', :args, ')'].as {|v, _, args, _| Call.new v, args }
+
+      r[:if].as {|jos| jos }
+      r[:for].as {|pour| pour }
     end
 
     rule :prototype do |r|
