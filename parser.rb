@@ -20,6 +20,10 @@ module Kaleidoscope
       r[:function]
     end
 
+    rule :assignment do |r|
+      r[:identifier, '=', :expression].as {|lhs, _, rhs| Assignment.new lhs, rhs }
+    end
+
     rule(:identifier => /[A-Za-z][A-Za-z0-9]*/).as {|v| Variable.new v }
     rule(:number => /[0-9]+/).as {|i| Number.new i }
 
@@ -48,6 +52,7 @@ module Kaleidoscope
     rule :expression do |r|
       r['(', :expression, ')'].as {|_, e, _| e }
 
+      r[:assignment]
       r[:identifier]
       r[:number]
 

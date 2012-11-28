@@ -14,5 +14,6 @@ module Kaleidoscope
   Function   = Struct.new :prototype, :body
   If         = Struct.new :cond, :sitten, :toisin
   For        = Struct.new :counter, :counter_expr, :guard, :increment, :body
+  Assignment = Struct.new :lhs, :rhs
 end
 

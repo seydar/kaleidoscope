@@ -40,6 +40,12 @@ module Kaleidoscope
     end
   end
 
+  class Assignment
+    def to_llvm(jit, func, builder, bindings)
+      bindings[lhs.name] = rhs.to_llvm(jit, func, builder, bindings)
+    end
+  end
+
   class Binary
     def to_llvm(jit, func, builder, bindings)
       l = left.to_llvm(jit, func, builder, bindings)
@@ -125,7 +131,7 @@ module Kaleidoscope
       # increment the counter and then add it to the phi node
       inc = increment.to_llvm(jit, func, builder, bindings)
       new_val = builder.fadd(bindings[counter.name], inc)
-      bindings[counter.name].add boucle => new_val
+      bindings[counter.name].add_incoming boucle => new_val
 
       # do we jump to termination or do we loop again?
       guard_cond = builder.fcmp(:one, new_val, guard_val)
