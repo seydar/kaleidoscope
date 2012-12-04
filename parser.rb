@@ -5,7 +5,8 @@ module Kaleidoscope
     rule(:wsp => /\s+/).skip!
     ['(', ')', ',', 'def', ';',
      'if', 'then', 'else',
-     'for', '=', ',', 'in'].each {|x| rule x }
+     'for', '=', ',', 'in',
+     'extern'].each {|x| rule x }
     ['+', '-'].each {|x| rule(x) % :left ^ 1 }
     ['*', '/'].each {|x| rule(x) % :left ^ 2 }
     ['>', '<'].each {|x| rule(x) % :left ^ 3 }
@@ -70,6 +71,9 @@ module Kaleidoscope
 
     rule :prototype do |r|
       r['def', :identifier, '(', :params, ')'].as do |_, name, _, params, _|
+        Prototype.new name, params
+      end
+      r['extern', :identifier, '(', :params, ')'].as do |_, name, _, params, _|
         Prototype.new name, params
       end
     end

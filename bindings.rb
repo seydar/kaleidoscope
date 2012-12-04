@@ -1,14 +1,9 @@
-require 'ffi'
+require 'llvm/support'
 
 module Kaleidoscope
   module Bindings
-    extend FFI::Library
-    ffi_lib 'LLVM-3.0'
-
-    attach_function :load_library_permanently, :LoadLibraryPermanently, [:string], :int
-
-    def self.load_library(lib)
-      !! load_library_permanently(lib) # cast to bool
+    def self.load_library(libname)
+      LLVM.load_library libname
     end
   end
 end

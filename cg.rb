@@ -10,14 +10,14 @@ module Kaleidoscope
     end
 
     def run(ast)
-      func = @module.functions.add("main#{@current_num}", [], LLVM::Float) do |main|
+      func = @module.functions.add("main#{@current_num}", [], LLVM::Double) do |main|
         entry = main.basic_blocks.append "entry"
         builder = LLVM::Builder.new
         builder.position_at_end entry
 
         # the last argument is for variables. it manages scoping
         res = ast.to_llvm(self, main, builder, @variables)
-        res = LLVM::Float 1 if LLVM::Function === res
+        res = LLVM::Double 1 if LLVM::Function === res
         builder.ret res
       end
 
@@ -30,7 +30,7 @@ module Kaleidoscope
 
   class Number
     def to_llvm(jit, func, builder, bindings)
-      LLVM::Float value.to_i
+      LLVM::Double value.to_i
     end
   end
 
@@ -80,7 +80,7 @@ module Kaleidoscope
 
       # everything is true except for 0
       condv = cond.to_llvm(jit, func, builder, bindings)
-      test = builder.fcmp(:one, LLVM::Float(0), condv, "test")
+      test = builder.fcmp(:one, LLVM::Double(0), condv, "test")
       builder.cond(test, tosi, epatosi)
 
       # jump to the end of a BB, add the generated code,
@@ -157,7 +157,7 @@ module Kaleidoscope
   class Prototype
     # http://llvm.org/docs/tutorial/LangImpl3.html
     def to_llvm(jit, func, builder, bindings)
-      f = jit.module.functions.add(name.name, [LLVM::Float] * parameters.size, LLVM::Float)
+      f = jit.module.functions.add(name.name, [LLVM::Double] * parameters.size, LLVM::Double)
       raise "redefinition of function" if f.basic_blocks.size != 0
       raise "diff number of args" if f.params.size != parameters.size
 

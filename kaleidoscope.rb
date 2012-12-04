@@ -17,8 +17,10 @@ end
 require relative{ 'ast.rb' }
 require relative{ 'parser.rb' }
 require relative{ 'cg.rb' }
+require relative{ 'bindings.rb' }
 
 line = ''
+Kaleidoscope::Bindings.load_library './libkaleidoscope.so'
 jit = Kaleidoscope::JIT.new
 
 loop do
