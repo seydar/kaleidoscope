@@ -1,12 +1,22 @@
+class Array
+  def to_llvm(jit, func, builder, bindings)
+    items = map {|item| item.to_llvm(jit, func, builder, bindings) }
+    items.last
+  end
+end
+
 module Kaleidoscope
   class JIT
     attr_accessor :module
     attr_accessor :variables
 
-    def initialize
+    def initialize(heapsize)
       @current_num = 0
       @module      = LLVM::Module.new '(sandbox)'
       @variables   = {}
+      #@gc          = GC.new self
+
+      #@gc.setup(heapsize)
     end
 
     def run(ast)
@@ -24,13 +34,13 @@ module Kaleidoscope
       jit = LLVM::JITCompiler.new @module
       res = jit.run_function @module.functions["main#{@current_num}"]
       @current_num += 1
-      res
+      res.to_f LLVM::Double
     end
   end
 
   class Number
     def to_llvm(jit, func, builder, bindings)
-      LLVM::Double value.to_i
+      LLVM::Double value.to_f
     end
   end
 
@@ -176,7 +186,6 @@ module Kaleidoscope
       f = prototype.to_llvm(jit, func, builder, muuttujat)
 
       entry = f.basic_blocks.append "entry"
-      p muuttujat
       rakentaja = LLVM::Builder.new
       rakentaja.position_at_end entry
 

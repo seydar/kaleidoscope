@@ -21,7 +21,7 @@ require relative{ 'bindings.rb' }
 
 line = ''
 Kaleidoscope::Bindings.load_library './libkaleidoscope.so'
-jit = Kaleidoscope::JIT.new
+jit = Kaleidoscope::JIT.new(1024 * 9)
 
 loop do
   print '>> '

@@ -3,8 +3,8 @@ module Kaleidoscope
   LINE_SIZE  = 128 # 128B
 
   class ImmixAllocator
-    def initialize(heapsize)
-      @heap = C.malloc(heapsize)
+    def initialize(gc)
+      @gc = gc
       @free_blocks = memory.each_slice(BLOCK_SIZE).to_a
       @recycled_blocks = []
     end

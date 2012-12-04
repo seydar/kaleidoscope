@@ -1,2 +1,5 @@
-o extern'd print function
+o Allocator
+o object memory
+  -> block management
+
 
