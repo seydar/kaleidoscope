@@ -18,6 +18,7 @@ require relative{ 'ast.rb' }
 require relative{ 'parser.rb' }
 require relative{ 'cg.rb' }
 require relative{ 'bindings.rb' }
+require relative{ 'gc.rb' }
 
 line = ''
 Kaleidoscope::Bindings.load_library './libkaleidoscope.so'
@@ -26,7 +27,8 @@ jit = Kaleidoscope::JIT.new(1024 * 9)
 loop do
   print '>> '
 
-  break unless bit = gets.chomp
+  break unless bit = gets
+  bit = bit.chomp
 
   if bit[0, 1] == '.'
     begin

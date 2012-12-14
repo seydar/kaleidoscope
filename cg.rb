@@ -9,17 +9,17 @@ module Kaleidoscope
   class JIT
     attr_accessor :module
     attr_accessor :variables
+    attr_accessor :gc
 
     def initialize(heapsize)
       @current_num = 0
       @module      = LLVM::Module.new '(sandbox)'
       @variables   = {}
-      #@gc          = GC.new self
-
-      #@gc.setup(heapsize)
+      @gc          = GC.new
     end
 
     def run(ast)
+      pp ast
       func = @module.functions.add("main#{@current_num}", [], LLVM::Double) do |main|
         entry = main.basic_blocks.append "entry"
         builder = LLVM::Builder.new
@@ -40,18 +40,21 @@ module Kaleidoscope
 
   class Number
     def to_llvm(jit, func, builder, bindings)
+      jit.gc.create
       LLVM::Double value.to_f
     end
   end
 
   class Variable
     def to_llvm(jit, func, builder, bindings)
+      jit.gc.get
       bindings[name] || raise("unknown variable `#{name}`")
     end
   end
 
   class Assignment
     def to_llvm(jit, func, builder, bindings)
+      jit.gc.create
       bindings[lhs.name] = rhs.to_llvm(jit, func, builder, bindings)
     end
   end
@@ -62,6 +65,7 @@ module Kaleidoscope
       r = right.to_llvm(jit, func, builder, bindings)
       raise "wtf" unless l && r
 
+      jit.gc.create
       case op
       when '+'
         builder.fadd(l, r);
@@ -133,6 +137,7 @@ module Kaleidoscope
       guard_val  = guard.to_llvm(jit, func, builder, bindings)
 
       # this is only one value because there IS no other value... yet
+      jit.gc.create
       bindings[counter.name] = builder.phi(initial.type,
                                            bonjour => initial)
 
@@ -144,7 +149,7 @@ module Kaleidoscope
       bindings[counter.name].add_incoming boucle => new_val
 
       # do we jump to termination or do we loop again?
-      guard_cond = builder.fcmp(:one, new_val, guard_val)
+      guard_cond = builder.fcmp(:ole, new_val, guard_val)
       builder.cond(guard_cond, boucle, apres)
 
       # terminate here
