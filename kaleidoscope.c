@@ -15,3 +15,38 @@ double putd(double x) {
 	
 	return 0;
 }
+
+
+float allocate() {
+  printf("@");
+  fflush(stdout);
+  
+  return 0;
+}
+
+float put() {
+  printf("*");
+  fflush(stdout);
+  return 0;
+}
+
+float update() {
+  printf("$");
+  fflush(stdout);
+  return 0;
+}
+
+float get() {
+  printf("#");
+  fflush(stdout);
+  return 0;
+}
+
+float create() {
+  printf("!");
+  allocate();
+  put();
+  update();
+  fflush(stdout);
+  return 0;
+}

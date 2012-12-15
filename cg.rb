@@ -15,7 +15,11 @@ module Kaleidoscope
       @current_num = 0
       @module      = LLVM::Module.new '(sandbox)'
       @variables   = {}
-      @gc          = GC.new
+      @gc          = GC.new self
+    end
+
+    def extern(*args)
+      @module.functions.add *args
     end
 
     def run(ast)
@@ -40,21 +44,21 @@ module Kaleidoscope
 
   class Number
     def to_llvm(jit, func, builder, bindings)
-      jit.gc.create
+      jit.gc.create builder
       LLVM::Double value.to_f
     end
   end
 
   class Variable
     def to_llvm(jit, func, builder, bindings)
-      jit.gc.get
+      jit.gc.get builder
       bindings[name] || raise("unknown variable `#{name}`")
     end
   end
 
   class Assignment
     def to_llvm(jit, func, builder, bindings)
-      jit.gc.create
+      jit.gc.create builder
       bindings[lhs.name] = rhs.to_llvm(jit, func, builder, bindings)
     end
   end
@@ -65,7 +69,7 @@ module Kaleidoscope
       r = right.to_llvm(jit, func, builder, bindings)
       raise "wtf" unless l && r
 
-      jit.gc.create
+      jit.gc.create builder
       case op
       when '+'
         builder.fadd(l, r);
@@ -137,7 +141,7 @@ module Kaleidoscope
       guard_val  = guard.to_llvm(jit, func, builder, bindings)
 
       # this is only one value because there IS no other value... yet
-      jit.gc.create
+      jit.gc.create builder
       bindings[counter.name] = builder.phi(initial.type,
                                            bonjour => initial)
 
