@@ -1,8 +1,6 @@
 require 'whittle'
-require 'llvm/core'
-require 'llvm/execution_engine'
-require 'llvm/transforms/scalar'
 require 'pp'
+require 'readline'
 
 module Kernel
   def relative(file=nil, &block)
@@ -16,19 +14,16 @@ end
 
 require relative{ 'ast.rb' }
 require relative{ 'parser.rb' }
-require relative{ 'cg.rb' }
-require relative{ 'bindings.rb' }
-require relative{ 'gc.rb' }
+require relative{ 'jit.rb' }
 
+K = Kaleidoscope
 line = ''
-Kaleidoscope::Bindings.load_library './libkaleidoscope.so'
-jit = Kaleidoscope::JIT.new(1024 * 9)
+jit = K::JIT.new K::KObject.size * 10_000
 
 loop do
   print '>> '
 
-  break unless bit = gets
-  bit = bit.chomp
+  break unless bit = Readline.readline
 
   if bit[0, 1] == '.'
     begin
@@ -45,17 +40,21 @@ loop do
   line += bit
 
   if line[-1, 1] == ';'
-    break if line == 'quit;'
-    break if line == 'exit;'
+    break if bit == 'quit;'
+    break if bit == 'exit;'
 
-    ast = Kaleidoscope::Parser.new.parse line
-    #pp ast
-    LLVM.init_x86
-    value = jit.run(ast)
-    #pp jit.module.dump
-    puts " => #{value.to_f}"
+    begin
+      ast = K::Parser.new.parse line
+      value = jit.run ast
+      puts " => #{value}"
+    rescue => r
+      puts r
+      puts r.backtrace
+    ensure
+      line = ''
+      next
+    end
 
-    line = ''
   end
 end
 

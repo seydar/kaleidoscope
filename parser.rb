@@ -11,6 +11,8 @@ module Kaleidoscope
     ['+', '-'].each {|x| rule(x) % :left ^ 1 }
     ['*', '/'].each {|x| rule(x) % :left ^ 2 }
     ['>', '<'].each {|x| rule(x) % :left ^ 3 }
+    ['==', '!='].each {|x| rule(x) % :left ^ 4 }
+    ['&&', '||'].each {|x| rule(x) % :left ^ 4 }
   
     rule :goal do |r|
       r[:statement, ';'].as {|s, _| s }
@@ -58,12 +60,9 @@ module Kaleidoscope
       r[:identifier]
       r[:number]
 
-      r[:expression, '+', :expression].as {|e, op, e2| Binary.new op, e, e2 }
-      r[:expression, '-', :expression].as {|e, op, e2| Binary.new op, e, e2 }
-      r[:expression, '*', :expression].as {|e, op, e2| Binary.new op, e, e2 }
-      r[:expression, '/', :expression].as {|e, op, e2| Binary.new op, e, e2 }
-      r[:expression, '<', :expression].as {|e, op, e2| Binary.new op, e, e2 }
-      r[:expression, '>', :expression].as {|e, op, e2| Binary.new op, e, e2 }
+      ['+', '-', '*', '/', '<', '>', '==', '!=', '&&', '||'].each do |op|
+        r[:expression, op, :expression].as {|e, o, e2| Binary.new o, e, e2 }
+      end
       r[:identifier, '(', :args, ')'].as {|v, _, args, _| Call.new v, args }
 
       r[:if].as {|jos| jos }
