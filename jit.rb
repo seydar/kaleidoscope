@@ -1,3 +1,6 @@
+require relative{ 'kfunction.rb' }
+require relative{ 'kobject.rb' }
+
 class Array
   def to_code(context)
     map {|i| i.to_code context }.last
@@ -5,20 +8,6 @@ class Array
 end
 
 module Kaleidoscope
-  # Naturally, a representation of functions
-  KFunction = Struct.new :name, :context, :params, :body do
-    def call(*args)
-      args.each_with_index do |a, i|
-        context.variables[params[i]] = a
-      end
-
-      body.to_code context
-    end
-  end
-
-  KObject = Struct.new :flags, :type, :value1, :value2
-  def KObject.size; 20; end # in bytes
-
   class JIT
     # Deals with scoping
     Context = Struct.new :functions, :variables do
@@ -42,7 +31,9 @@ module Kaleidoscope
 
   class Number
     def to_code(context)
-      value.to_f
+      KObject.create 0x00,
+                     :number,
+                     value.to_f
     end
   end
 
@@ -62,34 +53,42 @@ module Kaleidoscope
     def to_code(context)
       l = left.to_code(context)
       r = right.to_code(context)
-      raise "wtf" unless l.class == r.class
+      raise "wtf" unless l.type == :number && l.type == r.type
 
-      case op
-      when '+'
-        l + r
-      when '-'
-        l - r
-      when '*'
-        l * r
-      when '/'
-        l / r
-      when '<'
-        l < r ? 1 : 0
-      when '>'
-        l > r ? 1 : 0
-      when '=='
-        l == r ? 1 : 0
-      when '!='
-        l != r ? 1 : 0
-      else
-        raise "unknown binary operator `#{op}`"
-      end
+      l = l.value1
+      r = r.value1
+
+      res = case op
+            when '+'
+              l + r
+            when '-'
+              l - r
+            when '*'
+              l * r
+            when '/'
+              l / r
+            when '<'
+              l < r ? 1 : 0
+            when '>'
+              l > r ? 1 : 0
+            when '=='
+              l == r ? 1 : 0
+            when '!='
+              l != r ? 1 : 0
+            else
+              raise "unknown binary operator `#{op}`"
+            end
+
+      KObject.create 0x00, :number, res
     end
   end
 
   class If
     def to_code(context)
-      if cond.to_code(context) != 0
+      guard = cond.to_code(context)
+
+      # this check is to allow for empty linked lists
+      if guard.value1 && guard.value1 != 0
         sitten.to_code(context)
       else
         toisin.to_code(context)
@@ -99,16 +98,11 @@ module Kaleidoscope
 
   class For
     def to_code(context)
-      # fortext = for + context
-      fortext = context.clone
+      counter_expr.to_code context
 
-      fortext.variables[counter.name] = counter_expr.to_code fortext
-      genned_guard = guard.to_code fortext
-      inc = incremenet.to_code fortext
-
-      while fortext.variables[counter.name] < genned_guard
-        body.to_code fortext
-        fortext.variables[counter.name] += inc
+      while (g = guard.to_code(context)).value1 && g.value1 != 0
+        body.to_code context
+        increment.to_code context
       end
 
       1.0
@@ -120,7 +114,6 @@ module Kaleidoscope
       func = context.functions[name.name]
 
       raise "unknown function `#{name}`" unless func
-      raise "improper args" unless func.params.size == args.size
 
       # the arguments are passed with the run time's context
       func.call *args.map {|a| a.to_code(context) }
@@ -139,6 +132,15 @@ module Kaleidoscope
       functext.functions[name.name] = f
 
       f
+    end
+  end
+
+  class Extern
+    def to_code(context)
+      f = KExtern.new name.name, context
+      f.extern = Kernel.method name.name
+
+      context.functions[name.name] = f
     end
   end
 

@@ -11,8 +11,8 @@ module Kaleidoscope
     ['+', '-'].each {|x| rule(x) % :left ^ 1 }
     ['*', '/'].each {|x| rule(x) % :left ^ 2 }
     ['>', '<'].each {|x| rule(x) % :left ^ 3 }
-    ['==', '!='].each {|x| rule(x) % :left ^ 4 }
     ['&&', '||'].each {|x| rule(x) % :left ^ 4 }
+    ['==', '!='].each {|x| rule(x) % :left ^ 5 }
   
     rule :goal do |r|
       r[:statement, ';'].as {|s, _| s }
@@ -22,6 +22,7 @@ module Kaleidoscope
       r[:expression]
       r[:prototype]
       r[:function]
+      r[:extern]
     end
 
     rule :assignment do |r|
@@ -42,14 +43,10 @@ module Kaleidoscope
     end
 
     rule :for do |r|
-      r['for', :identifier, '=', :expression, ',',
-        :expression, 'in', :listed].as do |_, i, _, e, _, e1, _, e3|
-        For.new i, e, e1, nil, e3
-      end
-      r['for', :identifier, '=', :expression, ',',
+      r['for', :expression, ',',
         :expression, ',', :expression,
-        'in', :listed].as do |_, i, _, e, _, e1, _, e2, _, e3|
-        For.new i, e, e1, e2, e3
+        'in', :listed].as do |_, e, _, e1, _, e2, _, e3|
+        For.new e, e1, e2, e3
       end
     end
 
@@ -73,8 +70,11 @@ module Kaleidoscope
       r['def', :identifier, '(', :params, ')'].as do |_, name, _, params, _|
         Prototype.new name, params
       end
-      r['extern', :identifier, '(', :params, ')'].as do |_, name, _, params, _|
-        Prototype.new name, params
+    end
+
+    rule :extern do |r|
+      r['extern', :identifier].as do |_, name, _, params, _|
+        Extern.new name, params
       end
     end
 

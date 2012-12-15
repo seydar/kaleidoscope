@@ -11,9 +11,10 @@ module Kaleidoscope
   Binary     = Struct.new :op, :left, :right
   Call       = Struct.new :name, :args
   Prototype  = Struct.new :name, :parameters
+  Extern     = Struct.new :name, :parameters
   Function   = Struct.new :prototype, :body
   If         = Struct.new :cond, :sitten, :toisin
-  For        = Struct.new :counter, :counter_expr, :guard, :increment, :body
+  For        = Struct.new :counter_expr, :guard, :increment, :body
   Assignment = Struct.new :lhs, :rhs
 end
 

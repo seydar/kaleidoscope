@@ -18,7 +18,7 @@ require relative{ 'jit.rb' }
 
 K = Kaleidoscope
 line = ''
-jit = K::JIT.new K::KObject.size * 10_000
+jit = K::JIT.new 20* 10_000
 
 loop do
   print '>> '
@@ -46,7 +46,7 @@ loop do
     begin
       ast = K::Parser.new.parse line
       value = jit.run ast
-      puts " => #{value}"
+      puts " => #{value.inspect}"
     rescue => r
       puts r
       puts r.backtrace
