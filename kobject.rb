@@ -17,6 +17,10 @@ module Kaleidoscope
         @allocations ||= 0
       end
     end
+
+    def size
+      4 # bytes
+    end
   end
 end
 

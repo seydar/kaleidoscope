@@ -18,7 +18,7 @@ require relative{ 'jit.rb' }
 
 K = Kaleidoscope
 line = ''
-jit = K::JIT.new 20* 10_000
+jit = K::JIT.new 4 * 10_000
 
 loop do
   print '>> '

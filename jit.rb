@@ -1,5 +1,6 @@
 require relative{ 'kfunction.rb' }
 require relative{ 'kobject.rb' }
+require relative{ 'gc.rb' }
 
 class Array
   def to_code(context)
