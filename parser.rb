@@ -7,7 +7,7 @@ module Kaleidoscope
     ['(', ')', ',', 'def', ';',
      'if', 'then', 'else',
      'for', '=', ',', 'in',
-     'extern', '.'].each {|x| rule x }
+     'extern', '.', '[', ']'].each {|x| rule x }
     ['+', '-'].each {|x| rule(x) % :left ^ 1 }
     ['*', '/'].each {|x| rule(x) % :left ^ 2 }
     ['>', '<'].each {|x| rule(x) % :left ^ 3 }
@@ -80,6 +80,11 @@ module Kaleidoscope
 
     rule :function do |r|
       r[:prototype, :listed].as {|p, e| Function.new p, e }
+    end
+
+    rule :list do |r|
+      r['[', ']'].as {|_, _| List.new [] }
+      r['[', :listed, ']'].as {|_, listed, _| List.new listed }
     end
 
     rule :listed do |r|

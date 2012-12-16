@@ -16,5 +16,6 @@ module Kaleidoscope
   If         = Struct.new :cond, :sitten, :toisin
   For        = Struct.new :counter_expr, :guard, :increment, :body
   Assignment = Struct.new :lhs, :rhs
+  List       = Struct.new :items
 end
 

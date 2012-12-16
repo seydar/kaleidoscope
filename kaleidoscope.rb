@@ -14,11 +14,26 @@ end
 
 require relative{ 'ast.rb' }
 require relative{ 'parser.rb' }
+<<<<<<< HEAD
 require relative{ 'jit.rb' }
+=======
+require relative{ 'cg.rb' }
+require relative{ 'bindings.rb' }
+require relative{ 'gc.rb' }
+<<<<<<< HEAD
+>>>>>>> a17c6a7fdec738682739360d13dfc4a0855c0b3a
+=======
+>>>>>>> a17c6a7fdec738682739360d13dfc4a0855c0b3a
 
 K = Kaleidoscope
 line = ''
+<<<<<<< HEAD
 jit = K::JIT.new 4 * 10_000
+=======
+Kaleidoscope::Bindings.load_library './libkaleidoscope.so'
+Kaleidoscope::Bindings.load_library './libkgc.so'
+jit = Kaleidoscope::JIT.new(1024 * 9)
+>>>>>>> a17c6a7fdec738682739360d13dfc4a0855c0b3a
 
 loop do
   print '>> '
@@ -43,6 +58,7 @@ loop do
     break if bit == 'quit;'
     break if bit == 'exit;'
 
+<<<<<<< HEAD
     begin
       ast = K::Parser.new.parse line
       value = jit.run ast
@@ -54,6 +70,17 @@ loop do
       line = ''
       next
     end
+=======
+    ast = Kaleidoscope::Parser.new.parse line
+    #pp ast
+    LLVM.init_x86
+    value = jit.run(ast)
+    #pp jit.module.dump
+    puts " => #{value.to_f LLVM::Float}"
+<<<<<<< HEAD
+>>>>>>> a17c6a7fdec738682739360d13dfc4a0855c0b3a
+=======
+>>>>>>> a17c6a7fdec738682739360d13dfc4a0855c0b3a
 
   end
 end
