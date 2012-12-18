@@ -11,20 +11,23 @@ end
 module Kaleidoscope
   class JIT
     # Deals with scoping
-    Context = Struct.new :functions, :variables do
-      def clone
-        self.class.new functions.dup, variables.dup
-      end
+    Context = Struct.new :functions, :variables, :gc do
+      def clone; self.class.new functions.dup, variables.dup, gc; end
+      def create(*args); gc.create *args; end
+      def get(*args); gc.get *args; end
     end
+
+    attr_accessor :gc
 
     def initialize(heapsize)
       @functions = {}
       @variables = {}
       @heapsize  = heapsize
+      @gc        = GC.new @heapsize
     end
 
     def run(ast)
-      context = Context.new @functions, @variables
+      context = Context.new @functions, @variables, @gc
       res = ast.to_code context
       KFunction === res ? 1.0 : res
     end
@@ -32,7 +35,7 @@ module Kaleidoscope
 
   class Number
     def to_code(context)
-      KObject.create 0x00,
+      context.create 0x00,
                      :number,
                      value.to_f
     end
@@ -52,8 +55,8 @@ module Kaleidoscope
 
   class Binary
     def to_code(context)
-      l = left.to_code(context)
-      r = right.to_code(context)
+      l = context.get(left.to_code(context))
+      r = context.get(right.to_code(context))
       raise "wtf" unless l.type == :number && l.type == r.type
 
       l = l.value1
@@ -80,7 +83,7 @@ module Kaleidoscope
               raise "unknown binary operator `#{op}`"
             end
 
-      KObject.create 0x00, :number, res
+      context.create 0x00, :number, res
     end
   end
 

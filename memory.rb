@@ -1,5 +1,7 @@
 module Kaleidoscope
   class Memory
+    include Enumerable
+
     attr_accessor :memory
     attr_accessor :capacity
     attr_accessor :used
@@ -28,8 +30,13 @@ module Kaleidoscope
     def [](*args)
       memory[*args]
     end
+    alias_method :get, :[]
 
-    def []=(addr, obj)
+    def []=(f, s)
+      memory[f] = s
+    end
+
+    def store(addr, obj)
       check_size! addr
 
       if Range === addr
@@ -38,6 +45,10 @@ module Kaleidoscope
       else
         memory[addr] = obj
       end
+    end
+
+    def each(&block)
+      @memory.each &block
     end
   end
 end

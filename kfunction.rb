@@ -12,7 +12,7 @@ module Kaleidoscope
 
   KExtern = Struct.new :name, :context, :extern do
     def call(*args)
-      extern.call *args
+      extern.call *args.map {|a| context.get a }
 
       Number.new(1.0).to_code context
     end

@@ -20,7 +20,6 @@ module Kaleidoscope
 
     rule :statement do |r|
       r[:expression]
-      r[:prototype]
       r[:function]
       r[:extern]
     end
