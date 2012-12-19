@@ -9,7 +9,7 @@ module Kaleidoscope
       @current_block = nil
     end
 
-    def current_block
+    def current_block(no_more=false)
       return @current_block if @current_block
 
       @current_block = next_recyclable
@@ -18,6 +18,8 @@ module Kaleidoscope
       if @current_block
         @current_block
       else
+        return nil if no_more
+
         # try to create a new free block
         lim = (blocks.last && blocks.last.limit + 1) || 0
 
@@ -26,7 +28,7 @@ module Kaleidoscope
         blocks << block
 
         reset
-        current_block
+        current_block(true) # recurse only once more
       end
     end
 
@@ -78,7 +80,7 @@ module Kaleidoscope
         return i if @memory[i..(i + size)].map(&:nil?).all?
       end
 
-      raise "unable to allocate memory of size #{size}"
+      nil
     end
   end
 end

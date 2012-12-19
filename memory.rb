@@ -8,7 +8,7 @@ module Kaleidoscope
 
     def initialize(size)
       @capacity = size
-      @memory   = []
+      @memory   = Array.new size # we do this so we can have better inspection
     end
 
     def check_size!(addr=nil)

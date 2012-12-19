@@ -19,7 +19,7 @@ require relative{ 'jit.rb' }
 
 K = Kaleidoscope
 line = ''
-jit = K::JIT.new 200
+jit = K::JIT.new 1 * K::Block::SIZE
 @gc = jit.gc
 
 def blocks; @gc.bk.blocks.each {|b| p b; p; p }; end

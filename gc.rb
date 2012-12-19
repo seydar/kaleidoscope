@@ -13,11 +13,32 @@ module Kaleidoscope
       @bk     = Bookkeeper.new @memory
     end
 
+    def alloc(size)
+      @bk.alloc size
+    end
+
+    def find_space(size)
+      @bk.current_block.find_space size
+    end
+
     def create(*args)
       size = KObject::SIZE
-      addr = @bk.alloc size
+      addr = alloc size
+
+      unless addr
+        sweep
+
+        addr = alloc size
+
+        raise "unable to allocate memory of size #{size}" unless addr
+      end
+
       @memory.store(addr..addr + size - 1, KObject.new(*args))
       addr
+    end
+
+    def sweep
+      # do nothing
     end
 
     def get(addr)

@@ -24,7 +24,19 @@ module Kaleidoscope
       raise "out of memory error --- no block to use" if limit >= @memory.capacity
     end
 
+    def find_space(size)
+      holes.each_with_index do |hole, i|
+        if hole.span >= size
+          return hole.begin
+        end
+      end
+
+      nil
+    end
+
     def alloc(size)
+      recyclable!
+
       holes.each_with_index do |hole, i|
         if hole.span >= size
           h = (hole.begin + size)..hole.end
@@ -36,7 +48,7 @@ module Kaleidoscope
         end
       end
 
-      raise "no hole found"
+      nil
     end
 
     def reclaim(range)
@@ -80,7 +92,7 @@ module Kaleidoscope
         case o
         when KObject, :junk
           if in_space > 5
-            middle << "..#{in_space - 4}.."
+            middle << "..#{in_space}.."
           else
             middle << ('.' * in_space)
           end
@@ -103,9 +115,18 @@ module Kaleidoscope
         end
       end
 
+      if in_space > 5
+        middle << "..#{in_space}.."
+      else
+        middle << ('.' * in_space)
+      end
+
+      spaces = middle.size - (free? ? 3 : 9)
+      spaces = spaces > 0 ? spaces : 0
 
       "[ " + middle + " ]\n" +
-      "#{start}" + ' ' * (middle.size + 2) + "#{limit}"
+      "#{start}" + ' ' * (spaces / 2) +
+        (free? ? 'free' : 'recyclable') + ' ' * (spaces / 2) + "#{limit}"
     end
   end
 end
