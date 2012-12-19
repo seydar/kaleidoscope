@@ -19,7 +19,12 @@ require relative{ 'jit.rb' }
 
 K = Kaleidoscope
 line = ''
-jit = K::JIT.new 200
+@jit = jit = K::JIT.new 200
+
+def blocks; @jit.gc.bk.blocks.each {|b| p b; p; p }; end
+def get(addr); pp @jit.gc.get(addr); end
+def free(range); @jit.gc.bk.blocks[0].reclaim range; end
+def gc; @jit.gc; end
 
 loop do
   break unless bit = Readline.readline('>> ')

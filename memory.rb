@@ -47,6 +47,10 @@ module Kaleidoscope
       end
     end
 
+    def free(range)
+      range.each {|r| memory[r] = nil }
+    end
+
     def each(&block)
       @memory.each &block
     end

@@ -6,6 +6,7 @@ require relative{ 'kobject.rb' }
 module Kaleidoscope
   class GC
     attr_accessor :memory
+    attr_accessor :bk
 
     def initialize(mem_size)
       @memory = Memory.new mem_size
