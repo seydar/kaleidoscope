@@ -1,6 +1,7 @@
 require 'whittle'
 require 'pp'
 require 'readline'
+require 'fiber'
 
 module Kernel
   def relative(file=nil, &block)
@@ -18,12 +19,10 @@ require relative{ 'jit.rb' }
 
 K = Kaleidoscope
 line = ''
-jit = K::JIT.new 4 * 10_000
+jit = K::JIT.new 200
 
 loop do
-  print '>> '
-
-  break unless bit = Readline.readline
+  break unless bit = Readline.readline('>> ')
 
   if bit[0, 1] == '.'
     begin
@@ -46,7 +45,13 @@ loop do
     begin
       ast = K::Parser.new.parse line
       value = jit.run ast
-      puts " => #{value.inspect}"
+      v = jit.gc.get value
+
+      if v.type == :number
+        puts " %03d => #{v.value1}" % value
+      else
+        puts " %03d => (:linked_list)" % value
+      end
     rescue => r
       puts r
       puts r.backtrace
