@@ -85,7 +85,18 @@ module Kaleidoscope
             middle << ('.' * in_space)
           end
 
-          middle << '!'
+          if KObject === o
+            if o.type == :number
+              middle << 'o'
+            elsif o.type == :list
+              middle << 'l'
+            else
+              middle << 'x'
+            end
+          elsif :junk === o
+            middle << '-'
+          end
+
           in_space = 0
         else
           in_space += 1

@@ -87,6 +87,21 @@ module Kaleidoscope
     end
   end
 
+  class List
+    def to_code(context)
+      addr = items.pop.to_code(context)
+      tail = context.create 0x00, :list, addr, nil
+      prev = tail
+      items.reverse.each do |item|
+        addr = item.to_code(context)
+        link = context.create 0x00, :list, addr, prev
+        prev = link
+      end
+
+      prev
+    end
+  end
+
   class If
     def to_code(context)
       guard = cond.to_code(context)

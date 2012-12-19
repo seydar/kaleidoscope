@@ -19,12 +19,28 @@ require relative{ 'jit.rb' }
 
 K = Kaleidoscope
 line = ''
-@jit = jit = K::JIT.new 200
+jit = K::JIT.new 200
+@gc = jit.gc
 
-def blocks; @jit.gc.bk.blocks.each {|b| p b; p; p }; end
-def get(addr); pp @jit.gc.get(addr); end
-def free(range); @jit.gc.bk.blocks[0].reclaim range; end
+def blocks; @gc.bk.blocks.each {|b| p b; p; p }; end
+def get(addr); pp @gc.get(addr); end
+def free(range); @gc.bk.blocks[0].reclaim range; end
 def gc; @jit.gc; end
+
+def format(obj)
+  if obj.type == :number
+    obj.value1.to_s
+  else
+    str = "[#{format @gc.get(obj.value1)}"
+
+    until obj.value2.nil?
+      str << ", #{format @gc.get(@gc.get(obj.value2).value1)}"
+      obj = @gc.get(obj.value2)
+    end
+
+    str << "]"
+  end
+end
 
 loop do
   break unless bit = Readline.readline('>> ')
@@ -52,11 +68,7 @@ loop do
       value = jit.run ast
       v = jit.gc.get value
 
-      if v.type == :number
-        puts " %03d => #{v.value1}" % value
-      else
-        puts " %03d => (:linked_list)" % value
-      end
+      puts " %03d => #{format v}" % value
     rescue => r
       puts r
       puts r.backtrace

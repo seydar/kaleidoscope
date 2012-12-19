@@ -55,6 +55,7 @@ module Kaleidoscope
       r[:assignment]
       r[:identifier]
       r[:number]
+      r[:list]
 
       ['+', '-', '*', '/', '<', '>', '==', '!=', '&&', '||'].each do |op|
         r[:expression, op, :expression].as {|e, o, e2| Binary.new o, e, e2 }
