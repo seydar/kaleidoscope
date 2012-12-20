@@ -22,7 +22,7 @@ K = Kaleidoscope
 @lines = []
 @forwards = {}
 
-def blocks; proof; @gc.bk.blocks.each {|b| p b; p; p }; end
+def blocks; proof; @gc.bk.blocks.each {|b| puts b.inspect(@gc.bk); p; p }; end
 def get(addr); pp @gc.get(addr); end
 def free(range); @gc.bk.blocks[0].reclaim range; end
 def run(string); @lines << string; @jit.run K::Parser.new.parse(string); end
