@@ -13,8 +13,7 @@ require relative{ "helpers.rb" }
 @jit = Kaleidoscope::JIT.new Kaleidoscope::Block::SIZE * 2
 @gc = @jit.gc
 
-98.times { run "1;" }; blocks
-run "a = [1, 2, 3, 4, 5, 6];"; blocks
+run "a = [#{(1..26).to_a.join(', ')}];"; blocks
 get(run("a[0];"))
-get(run("a[5];"))
+get(run("a[25];"))
 

@@ -10,6 +10,8 @@ end
 
 require relative{ "helpers.rb" }
 
+@jit = Kaleidoscope::JIT.new Kaleidoscope::Block::SIZE * 2
+@gc = @jit.gc
 
 10.times { run "1;" }; blocks
 collect; blocks
@@ -18,11 +20,11 @@ assert @gc.memory.map {|o| o.nil? }.all?
 
 10.times { run "34;" }
 run "a = [1, 2, 3];"; blocks
-trace; blocks
+compact; trace; blocks
 sweep; blocks
 
 5.times { run "34;" }; blocks
-trace; blocks
+compact; trace; blocks
 sweep; blocks
 
 

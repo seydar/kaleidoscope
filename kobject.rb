@@ -12,8 +12,12 @@ module Kaleidoscope
       self.flags = self.flags | 0x01
     end
 
+    def unmark!
+      self.flags = self.flags & 0xFE
+    end
+
     def marked?
-      self.flags & 0x01
+      !(self.flags & 0x01).zero?
     end
 
     def forward!
@@ -21,7 +25,12 @@ module Kaleidoscope
     end
 
     def forwarded?
-      self.flags & 0x02
+      !(self.flags & 0x02).zero?
+    end
+
+    def forward_to(addr)
+      forward!
+      self.value2 = addr
     end
   end
 end

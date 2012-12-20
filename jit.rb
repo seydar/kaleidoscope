@@ -91,8 +91,6 @@ module Kaleidoscope
 
   class List
     def to_code(context)
-      #context.gc.find_space items.size * KObject::SIZE * 2
-
       addr = items.last.to_code(context)
       tail = context.create 0x00, :list, addr, nil
       prev = tail

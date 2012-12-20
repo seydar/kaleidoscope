@@ -19,9 +19,8 @@ require relative{ '../parser.rb' }
 require relative{ '../jit.rb' }
 
 K = Kaleidoscope
-@jit = Kaleidoscope::JIT.new Kaleidoscope::Block::SIZE * 1
-@gc = @jit.gc
 @lines = []
+@forwards = {}
 
 def blocks; proof; @gc.bk.blocks.each {|b| p b; p; p }; end
 def get(addr); pp @gc.get(addr); end
@@ -30,9 +29,13 @@ def run(string); @lines << string; @jit.run K::Parser.new.parse(string); end
 def assert(s); raise unless s; end
 def proof; puts; @lines.each {|l| puts ">> #{l}" }; @lines.clear; end
 def collect; @lines << "@gc.collect"; @gc.collect; end
+def compact
+  @lines << "@gc.compact"
+  @forwards = @gc.compact @gc.compaction_candidates?
+end
 def trace
-  @lines << "@gc.trace @jit.variables.values"
-  @gc.trace @jit.variables.values
+  @lines << "@gc.trace @jit.variables.values, forwards"
+  @gc.trace @jit.variables.values, @forwards
 end
 def sweep; @lines << "@gc.sweep"; @gc.sweep; end
 

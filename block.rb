@@ -57,7 +57,7 @@ module Kaleidoscope
     end
 
     def reclaim(range, clean=false)
-      memory.free range
+      memory.reclaim range
       holes << range
 
       clean_holes if clean
@@ -70,12 +70,13 @@ module Kaleidoscope
         latest = [i, i - 1] if latest.empty? 
         if o.nil?
           latest[1] += 1
-        else
+        elsif latest[1] - latest[0] >= 0
           @holes << (latest[0]..latest[1])
+          latest = []
         end
       end
 
-      @holes << (latest[0]..latest[1])
+      @holes << (latest[0]..latest[1]) if latest[1] - latest[0] >= 0
     end
 
     def clean_holes
@@ -108,7 +109,7 @@ module Kaleidoscope
       @memory[start..limit].map {|o| o.nil? }.all?
     end
 
-    def inspect
+    def inspect(bk=nil)
       top = ''
       middle = ''
 
@@ -125,7 +126,7 @@ module Kaleidoscope
             top << (' ' * in_space)
           end
 
-          if @memory.marked?(i + start)
+          if bk && bk.marked?(i + start)
             top << 'v'
           else
             top << ' '
