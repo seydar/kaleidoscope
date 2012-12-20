@@ -1,0 +1,202 @@
+\documentclass{article}
+\newcommand{\degree}{\ensuremath{^\circ}}
+\title{Immix Garbage Collection and Simulator Implemented in Ruby}
+\author{Ari Browm and Bo Chen}
+\date{\today}
+\begin{document}
+  \maketitle
+
+  \section{Introduction}
+  Immix garbage collector is one that takes advantage of both mark-sweep and
+  semi-space garbage collection mechanisms, first introduced and published in
+  \emph{Immix Garbage Collection: Fast Collection, Space Efﬁciency, and Mutator
+  Locality}, by S. Blackburn and K. McKinley in 2007. It claims to achieve
+  collector efficiency, heap space efficiency and mutator locality at once and
+  outperforms traditional mark-sweep, mark-compact, and semi-space garbage
+  collectors by 8 to 10 percent across benchmarks on 3 different architectures
+  and all heap sizes. The research project detailed in this paper took the
+  algorithm of the immix garbage collector and built it with Ruby to demonstrate
+  its garbage collection mechanism. Our project also produced a GC simulator
+  with the intent of being used for learning purposes. It features a bare-bones
+  language, clean code, structural independence for the GC, testing facilities,
+  and appropriate visualizations of memory.
+
+  \section{Technical Solution}
+  \subsection{The Immix Algorithm}
+  The key components of the Immix garbage collector consists of first, the
+  organization of the memory in contiguous blocks of lines; second, line and
+  block granularity reclamation, and third, an opportunistic compaction
+  mechanism. The garbage collection is triggered after the allocation has
+  exhausted the heap. The immix collector performs a transitive closure by
+  tracing through the object path and records the lives in which live objects
+  are stored. Immix then performs a block-granularity sweep by scanning the line
+  map to identify completely free blocks, which will be returned to the global
+  pool and the partially free blocks which will be recycled for steady state
+  allocation. In this phase, the thread-local allocator will bump allocate into
+  holes (one or more contiguous unused lines) until all recycled blocks are
+  exhausted, and allocation will then resume to allocate into the empty blocks
+  till the exhaustion of the heap. \\
+
+  Opportunistic Compaction is performed to eliminate fragmentation based on the
+  number of holes, the liveness of the objects and the unused memory available
+  within the blocks under inspection. Compaction is triggered when there are one
+  or more recyclable blocks didn't used by the allocator or the previous
+  collection failed yield enough free space. If the object is live, not pinned
+  and there is available space, the live object in the compaction candidate
+  block will then be opportunistically copied and allocated in the same way as
+  the steady state allocation. If a object is pinned, it is marked as live and
+  left unmoved.
+
+  \subsection{Detail and Evaluation}
+  The immix garbage collector treats memory as blocks of contiguous memory
+  consisting of lines. The size of a line is 128B and a block size is 32KB. The
+  lines correspond the the fine granularity and blocks correspond to the coarse
+  granularity, where a block is also the finest granularity shared by threads.
+  The immix garbage collector design favors unsynchronized thread-local
+  activities over the synchronized global activities in order to achieve
+  maximized parallelism and also good locality. Therefore, the size of block is
+  closely related to the issue of space sharing, synchronization overhead and
+  fragmentation. Smaller sizes contribute to better space sharing and lower
+  fragmentation ratio at the cost of synchronization overhead, while larger
+  block sizes leverage less synchronization overhead at the cost of poorer space
+  sharing and higher fragmentation. \\
+
+  Conservative line marking is employed as opposed to exact marking scheme.
+  Before mark time, objects occupying space larger than a line is marked with a
+  bit in their header during allocation as opposed to collection. At mark time,
+  line mark for the last line of large objects and the extra line of small
+  object spilling into another line. Before allocation, line marks are corrected
+  by marking the first line of every hole. Small objects are marked by setting
+  the line of their start address, and larger objects are marked all the lines
+  within their size except their last line. Based on the observation that the
+  majority of the objects have size smaller than a line, such technique is lot
+  cheaper than exact line marking which has to obtain the object's type and
+  iterate all the address range during marking, at the cost of worst case
+  scenario in which one line is wasted for every hole.
+
+  \section{Implementation}
+  The project’s scope is to demonstrate the immix gc in action, with the memory
+  organized in blocks with size of 200 bytes, mark-sweep and opportunistic
+  compaction mechanism to fully simulate a single thread immix garbage collector
+  implemented in ruby.
+
+  \subsection{Problems Relating to Real-World Implementation}
+  Our first implementation featured an actual immix garbage collector featured
+  an allocator dealt with low-level details using <sys/mman> library. However,
+  we have encountered inconsistent memory faults resulting from memory
+  allocation on OSX and linux environment, resulting in garbage collector
+  implemented in Ruby to fail to allocate the memory from the heap. The issue
+  was alleviated after using malloc() to obtain memory for the purpose of
+  bookkeeping of the status of memory at block granularity, we then encountered
+  issues with the incorrect block address alignment in the block initialization
+  process, with a failed assertion that the newly allocated block's starting
+  address failed to be aligned at the multiple of the blocksize (boundary of
+  block sizes) after alignment step in the initialization process. Such resulted
+  in a faulty casting from an Address object (Address addr;) to an instance of
+  Object (Object obj;) when used in the allocator portion of the implementation
+  and resulted in memory faults, which hamper the success of the entire
+  implementation from correctly tracking and managing objects for garbage
+  collection.
+
+  \subsection{Simulator}
+  To alleviate the problems we had before, we decided to create a simulation
+  environment where we could deterministically build and run a garbage collector
+  with the ultimate goal of learning from it. This took the project from a
+  real-world example to an education tool. The advantage of using our tool to
+  build and study algorithms is that you can programmatically build test cases
+  using the frontend of the Kaleidoscope language, examine the memory and GC
+  functions, and continue running the program in bullet-time, if so desired. \\
+
+  The language consists of an LALR(1) parser that then interprets the resultant
+  AST and executes the accompanying Ruby code on-the-fly. In the early days of
+  the project, the interpreter and simulation environment ended there, but
+  changes were quickly made to include a fake memory object which is allocated
+  from and treated as though it were real. The language implements floats and
+  linked lists, along with list element access in O(n) time. We felt that these
+  two datatypes were sufficient to showcase a garbage collectors abilities. \\
+
+  We implemented a single-threaded version of the Immix GC as an example of how
+  to use this system. The system was built to allow you to focus on only the
+  garbage collector, abstracting away the details of the language and underlying
+  memory. Thus, this makes it extremely easy to gather and provide statistics on
+  both GC functions and memory access.
+
+  \section{Results}
+  The results of this project are a simulator and working garbage collector. As
+  running the tests in the ‘test’ directory will show, the GC properly
+  allocates, traces, and collects the memory contained in the blocks. It also
+  successfully negotiates collections that occur in the middle of allocating
+  linked lists. For instance, if a linked list allocation were to overflow a
+  block full of unreachable objects, the GC would collect the block while
+  maintaining the portion of the list that has already been allocated, and it
+  would resume allocation at the next available spot, which in our example
+  (test/list.rb) is the beginning of that same block. Our simulator also deals
+  with allocating very large linked lists that span over a block. In the list
+  construction code, it creates a root in the transitive object closure graph to
+  the latest object in the list so that if collection does occur (and in our
+  example it does indeed), the GC will be able to trace it and mark its parts.
+  Due to the scale of our simulator, we chose to make line granularity the size
+  of 1 byte, which, while defeating the improvement of speed, gives us a better
+  understanding of how the GC works and is working. We focused instead on the
+  aspects of the immix GC that makes is powerful: blocks, various granularity,
+  and compaction at the block level. \\
+
+  Our simulator itself has been quite successful for debugging the GC as we
+  built it, which shows that the simulator has been a success and has met its
+  purpose. The design of the test cases, which allow you to generate the code you
+  want to run and then use the frontend of the language implementation, does
+  full integration testing and offers extra support for memory and GC
+  introspection. It is our hope that we continue to work on the simulator after
+  this class and provide extra garbage collection algorithms to make this a more
+  useful learning tool.
+
+  \section{Improvement}
+  Due to the scope of the project, we made a conscious decision to reduce the
+  level of line granualarity. In future version, we would like to increase the
+  granularity and visualization of lines so that the true power of the immix GC
+  may be witnessed. \\
+
+  As with all coding projects, a future improvement would be increased
+  documentation and code encapsulation.
+
+  \section{Conclusions}
+  The immix garbage collection algorithm is a compromise between the slowness,
+  fragmentation, and space efficiency of the Mark and Sweep algorithm and the
+  speed, compactness, and space inefficiency of the Semi-Space Collection
+  algorithm. It represents the future of GC algorithms and is a much needed
+  update to a field subset that has been plateaued for many years. \\
+
+  As a result of the past 40 years of garbage collection research, students
+  fail to fully comprehend how they work and do not have a suitable environment
+  in which to learn besides writing a collector themselves. This is, naturally,
+  an inefficient and often unsuccessful manner of learning. Our simulator fills
+  this gap in the educator's toolbox and provides a framework for studying
+  garbage collectors in a tame, simplified language environment. It is better
+  than purely emulated memory because it offers the facilities of a
+  general-purpose programming language.
+
+  \begin{thebibliography}{1}
+    \bibitem{immix} S.M. Blackburn and K. S. Mckinley,
+    \emph{Immix: A Mark-Region Garbage Collector
+    with Space Efficiency, Fast Collection, and Mutator Performance},
+    Australian National Univ., ACM, 2007.
+
+    \bibitem{multi} S. Marlow and S.P. Jones,
+    \emph{Multicore Garbage Collection with Local Heaps},
+    Microsoft Research, Cambridge, UK, 2010.
+
+    \bibitem{jones} R. Jones,
+    \emph{Garbage Collection: Algorithms for Automatic Dynamic Memory
+    Management},
+    1996.
+
+    \bibitem{other} R. Jones,
+    \emph{Garbage Collection Handbook: Art of Automatic Memory Management},
+    2012.
+
+    \bibitem{code} http://github.com/seydar/kaleidoscope
+  
+  \end{thebibliography}
+
+\end{document}
+
