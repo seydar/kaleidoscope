@@ -17,19 +17,21 @@ module Kaleidoscope
       def get(*args); gc.get *args; end
     end
 
+    attr_accessor :variables
+    attr_accessor :functions
     attr_accessor :gc
 
     def initialize(heapsize)
       @functions = {}
       @variables = {}
       @heapsize  = heapsize
-      @gc        = GC.new @heapsize
+      @gc        = GC.new self, @heapsize
     end
 
     def run(ast)
       context = Context.new @functions, @variables, @gc
       res = ast.to_code context
-      KFunction === res ? 1.0 : res
+      KFunction === res ? Number.new(1.0).to_code(context) : res
     end
   end
 
@@ -89,16 +91,45 @@ module Kaleidoscope
 
   class List
     def to_code(context)
-      addr = items.pop.to_code(context)
+      #context.gc.find_space items.size * KObject::SIZE * 2
+
+      addr = items.last.to_code(context)
       tail = context.create 0x00, :list, addr, nil
       prev = tail
-      items.reverse.each do |item|
+      context.variables[:prev] = prev
+      items[0..-2].reverse.each do |item|
         addr = item.to_code(context)
         link = context.create 0x00, :list, addr, prev
         prev = link
+
+        # in case collection happens during the creation of a list
+        # we don't want to lose what we have
+        context.variables[:prev] = prev
       end
 
+      context.variables.delete :prev
+
       prev
+    end
+  end
+
+  class Sub
+    def to_code(context)
+      id = context.get identifier.to_code(context)
+      num = context.get expr.to_code(context)
+      raise "can't treat #{id.type} as a list" unless id.type == :list
+      raise "can't use #{num.type} to index a linked list" unless num.type == :number
+      num = num.value1.floor
+
+      prev = id
+      obj = prev.value1
+      num.times do
+        raise "trying to go beyond list elements" if prev.value2.nil?
+        prev = context.get prev.value2
+        obj = prev.value1
+      end
+
+      obj
     end
   end
 
@@ -167,6 +198,7 @@ module Kaleidoscope
     def to_code(context)
       func         = prototype.to_code context
       func.body    = body
+      func.body.freeze
 
       func
     end

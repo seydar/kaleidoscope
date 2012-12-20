@@ -53,6 +53,7 @@ module Kaleidoscope
       r['(', :expression, ')'].as {|_, e, _| e }
 
       r[:assignment]
+      r[:expression, '[', :expression, ']'].as {|i, _, e, _| Sub.new i, e }
       r[:identifier]
       r[:number]
       r[:list]

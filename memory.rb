@@ -5,10 +5,12 @@ module Kaleidoscope
     attr_accessor :memory
     attr_accessor :capacity
     attr_accessor :used
+    attr_accessor :marked
 
     def initialize(size)
       @capacity = size
       @memory   = Array.new size # we do this so we can have better inspection
+      @marked   = Array.new size
     end
 
     def check_size!(addr=nil)
@@ -47,12 +49,29 @@ module Kaleidoscope
       end
     end
 
-    def free(range)
-      range.each {|r| memory[r] = nil }
+    def reclaim(range)
+      if Range === range
+        range.each {|r| memory[r] = nil; marked[r] = false }
+      else
+        memory[range] = nil;
+        marked[range] = false;
+      end
     end
 
     def each(&block)
       @memory.each &block
+    end
+
+    def mark!(addr)
+      if Range === addr
+        addr.each {|r| @marked[r] = true }
+      else
+        @marked[addr] = true
+      end
+    end
+
+    def marked?(addr)
+      @marked[addr]
     end
   end
 end

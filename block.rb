@@ -35,15 +35,16 @@ module Kaleidoscope
     end
 
     def alloc(size)
-      recyclable!
-
       holes.each_with_index do |hole, i|
         if hole.span >= size
           h = (hole.begin + size)..hole.end
+
           holes.delete_at i
           if h.span > 0
             holes.insert i, h
           end
+
+          recyclable!
           return hole.begin
         end
       end
@@ -51,11 +52,30 @@ module Kaleidoscope
       nil
     end
 
-    def reclaim(range)
+    def store(*args)
+      @memory.store *args
+    end
+
+    def reclaim(range, clean=false)
       memory.free range
       holes << range
 
-      clean_holes
+      clean_holes if clean
+    end
+
+    def new_holes!
+      @holes = []
+      latest = []
+      @memory[start..limit].each_with_index do |o, i|
+        latest = [i, i - 1] if latest.empty? 
+        if o.nil?
+          latest[1] += 1
+        else
+          @holes << (latest[0]..latest[1])
+        end
+      end
+
+      @holes << (latest[0]..latest[1])
     end
 
     def clean_holes
@@ -84,17 +104,31 @@ module Kaleidoscope
     def recyclable?; !free?; end
     def recyclable!; self.free = false; end
 
+    def empty?
+      @memory[start..limit].map {|o| o.nil? }.all?
+    end
+
     def inspect
+      top = ''
       middle = ''
 
       in_space = 0
-      memory[start..limit].each do |o|
+      memory[start..limit].each_with_index do |o, i|
         case o
         when KObject, :junk
           if in_space > 5
-            middle << "..#{in_space}.."
+            phrase = "..#{in_space}.."
+            middle << phrase
+            top << (' ' * phrase.size)
           else
             middle << ('.' * in_space)
+            top << (' ' * in_space)
+          end
+
+          if @memory.marked?(i + start)
+            top << 'v'
+          else
+            top << ' '
           end
 
           if KObject === o
@@ -124,6 +158,7 @@ module Kaleidoscope
       spaces = middle.size - (free? ? 3 : 9)
       spaces = spaces > 0 ? spaces : 0
 
+      "  " + top + "\n" +
       "[ " + middle + " ]\n" +
       "#{start}" + ' ' * (spaces / 2) +
         (free? ? 'free' : 'recyclable') + ' ' * (spaces / 2) + "#{limit}"

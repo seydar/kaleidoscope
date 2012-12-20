@@ -17,15 +17,24 @@ require relative{ 'ast.rb' }
 require relative{ 'parser.rb' }
 require relative{ 'jit.rb' }
 
-K = Kaleidoscope
 line = ''
-jit = K::JIT.new 1 * K::Block::SIZE
-@gc = jit.gc
+K = Kaleidoscope
+@jit = Kaleidoscope::JIT.new Kaleidoscope::Block::SIZE * 1
+@gc = @jit.gc
+@lines = []
 
-def blocks; @gc.bk.blocks.each {|b| p b; p; p }; end
+def blocks; proof; @gc.bk.blocks.each {|b| p b; p; p }; end
 def get(addr); pp @gc.get(addr); end
 def free(range); @gc.bk.blocks[0].reclaim range; end
-def gc; @jit.gc; end
+def run(string); @lines << string; @jit.run K::Parser.new.parse(string); end
+def assert(s); raise unless s; end
+def proof; puts; @lines.each {|l| puts ">> #{l}" }; @lines.clear; end
+def collect; @lines << "@gc.collect"; @gc.collect; end
+def trace
+  @lines << "@gc.trace @jit.variables.values"
+  @gc.trace @jit.variables.values
+end
+def sweep; @lines << "@gc.sweep"; @gc.sweep; end
 
 def format(obj)
   if obj.type == :number
@@ -65,8 +74,8 @@ loop do
 
     begin
       ast = K::Parser.new.parse line
-      value = jit.run ast
-      v = jit.gc.get value
+      value = @jit.run ast
+      v = @gc.get value
 
       puts " %03d => #{format v}" % value
     rescue => r

@@ -7,8 +7,10 @@ module Kaleidoscope
   class GC
     attr_accessor :memory
     attr_accessor :bk
+    attr_accessor :jit
 
-    def initialize(mem_size)
+    def initialize(jit, mem_size)
+      @jit    = jit
       @memory = Memory.new mem_size
       @bk     = Bookkeeper.new @memory
     end
@@ -26,19 +28,40 @@ module Kaleidoscope
       addr = alloc size
 
       unless addr
-        sweep
+        collect
 
         addr = alloc size
 
         raise "unable to allocate memory of size #{size}" unless addr
       end
 
-      @memory.store(addr..addr + size - 1, KObject.new(*args))
+      @bk.current_block.store(addr..addr + size - 1, KObject.new(*args))
       addr
     end
 
+    def collect
+      trace @jit.variables.values
+      sweep
+    end
+
+    def trace(nodes)
+      nodes.each do |node|
+        obj = get node
+        @memory.mark! node..node + obj.size - 1
+        trace [obj.value1] if obj.type == :list
+        trace [obj.value2] if obj.value2
+      end
+    end
+
     def sweep
-      # do nothing
+      range = nil
+      (0..@memory.capacity).each do |i|
+        @memory.reclaim i unless @memory.marked? i
+        @memory.marked[i] = false
+      end
+
+      @bk.blocks.each {|b| b.new_holes! }
+      @bk.blocks.each {|b| b.free! if b.empty? }
     end
 
     def get(addr)

@@ -17,5 +17,6 @@ module Kaleidoscope
   For        = Struct.new :counter_expr, :guard, :increment, :body
   Assignment = Struct.new :lhs, :rhs
   List       = Struct.new :items
+  Sub        = Struct.new :identifier, :expr
 end
 
